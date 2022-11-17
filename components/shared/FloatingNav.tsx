@@ -17,7 +17,7 @@ export default function Example() {
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 pb-2 sm:pb-5 sm:px-36">
-        <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl px-2 sm:px-6 lg:px-8">
           <div className="rounded-lg bg-gray-900 p-2 shadow-lg sm:p-3 bg-opacity-80">
             <div className="hidden sm:flex items-center sm:px-2">
               <div className="flex w-0 flex-1 items-center">

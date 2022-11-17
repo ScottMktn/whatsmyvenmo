@@ -13,7 +13,7 @@ const HomePage: NextPage = () => {
       <div className="p-4">
         <h1 className="text-6xl text-left font-light sm:font-medium sm:text-center">
           Welcome to{" "}
-          <span className="font-semibold sm:bg-blue-300 sm:p-2 sm:rounded-lg text-6xl">
+          <span className="font-bold text-blue-400 sm:bg-blue-300 sm:text-black sm:p-2 sm:rounded-lg text-6xl">
             Whats My Venmo
           </span>
         </h1>

@@ -154,7 +154,7 @@ const VotePage = () => {
   return (
     <BasePage
       metaData={{ title: "Do Math | Calculate" }}
-      className="min-h-screen sm:px-36"
+      className="min-h-screen sm:px-36 max-w-4xl mx-auto"
     >
       <div className="p-4">
         <h1 className="mt-2 text-2xl text-left font-semibold">
@@ -193,10 +193,13 @@ const VotePage = () => {
             </button>
           </div>
           <div className="border-t border-gray-400 w-full mt-4 pt-2">
-            <div className="flex flex-row justify-between mt-2 py-2">
-              <p>Name</p>
-              <p>Amount Paid</p>
-            </div>
+            {people.length > 0 && (
+              <div className="flex flex-row justify-between mt-2 py-2">
+                <p>Name</p>
+                <p>Amount Paid</p>
+              </div>
+            )}
+
             {people.map((p, idx) => (
               <div className="flex flex-row justify-between pb-3" key={idx}>
                 <input
