@@ -153,7 +153,7 @@ const VotePage = () => {
 
   return (
     <BasePage
-      metaData={{ title: "Do Math | Calculate" }}
+      metaData={{ title: "Whats My Venmo | Calculate" }}
       className="min-h-screen sm:px-36 max-w-4xl mx-auto"
     >
       <div className="p-4">

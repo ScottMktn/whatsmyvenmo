@@ -17,7 +17,8 @@ const BasePage = (props: BasePageProps) => {
   return (
     <div className={`flex flex-col pb-24 ${className}`}>
       <Head>
-        <title>{metaData?.title || "Flexbook"}</title>
+        <title>{metaData?.title || "Whats My Venmo"}</title>
+        <link rel="icon" href="/blue.jpeg" />
       </Head>
       {children}
     </div>
