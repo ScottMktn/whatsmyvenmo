@@ -1,14 +1,13 @@
-import FloatingNav from "../components/shared/FloatingNav";
-import BasePage from "../components/templates/BasePage";
+import FloatingNav from "../../../components/shared/FloatingNav";
+import BasePage from "../../../components/shared/BasePage";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
   CurrencyDollarIcon,
 } from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
+import { useState } from "react";
 
-interface Person {
+export interface Person {
   id: number;
   name: string;
   amount: number;
@@ -33,26 +32,16 @@ interface Output {
   decision: Decision[];
 }
 
-const VotePage = () => {
-  const router = useRouter();
-  const [people, setPeople] = useState<Person[]>([]);
+interface TripCalculatorProps {
+  tripId?: string;
+  initialPeople?: Person[];
+}
+
+const TripCalculator = (props: TripCalculatorProps) => {
+  const { tripId, initialPeople } = props;
+  const [people, setPeople] = useState<Person[]>(initialPeople || []);
   const [output, setOutput] = useState<Output>();
   const [showBreakdown, setShowBreakdown] = useState<boolean>(false);
-
-  const generatePeople = () => {
-    const query: string = router.query["q"] as string;
-    const arr = query.split("&");
-    const people: Person[] = arr.map((a, index) => {
-      const data = a.split("-");
-      const amount = data[1];
-      return {
-        amount: parseInt(amount, 10),
-        id: index,
-        name: data[0],
-      };
-    });
-    return people;
-  };
 
   const nameHandler = (id: number, value: string) => {
     const copy = [...people];
@@ -75,10 +64,6 @@ const VotePage = () => {
   };
 
   const onCalculate = () => {
-    const stringArr = people.map((p) => `${p.name}-${p.amount}`).join("&");
-    router.query["q"] = stringArr;
-    router.push(router);
-
     const total = people.reduce((result, person) => {
       return result + person.amount;
     }, 0);
@@ -145,12 +130,6 @@ const VotePage = () => {
     });
   };
 
-  useEffect(() => {
-    if (router.query["q"]) {
-      setPeople(generatePeople());
-    }
-  }, [router.query]);
-
   return (
     <BasePage
       metaData={{ title: "Whats My Venmo | Calculate" }}
@@ -158,8 +137,16 @@ const VotePage = () => {
     >
       <div className="p-4">
         <h1 className="mt-2 text-2xl text-left font-semibold">
-          Calculate who owes who what
+          Had a long weekend trip?
         </h1>
+        <h6 className="mt-2 text-lg text-left font-normal">
+          Calculate who owes who what
+        </h6>
+        {tripId && (
+          <h6 className="mt-4 text-lg text-left font-normal">
+            Trip ID: {tripId}
+          </h6>
+        )}
         <div
           id="config"
           className="border border-gray-500 rounded-md p-2 mt-4 flex flex-col"
@@ -313,4 +300,4 @@ const VotePage = () => {
   );
 };
 
-export default VotePage;
+export default TripCalculator;

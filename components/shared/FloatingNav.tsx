@@ -4,6 +4,7 @@ import {
   GlobeAltIcon,
   CalculatorIcon,
   HomeIcon,
+  TruckIcon,
   FlagIcon,
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/router";
@@ -31,10 +32,10 @@ export default function Example() {
                 <div className="w-0.5 bg-gray-400 h-8 mx-4" />
                 <button
                   className="flex rounded-md bg-black px-4 py-2 text-white font-semibold hover:bg-gray-800"
-                  onClick={() => router.push("/calculate")}
+                  onClick={() => router.push("/trip")}
                 >
-                  <CalculatorIcon className="text-white w-4 h-4 mt-1 mr-2" />
-                  Calculator
+                  <TruckIcon className="text-white w-4 h-4 mt-1 mr-2" />
+                  Trip Calculator
                 </button>
               </div>
               <button
@@ -56,11 +57,10 @@ export default function Example() {
                 </button>
                 <div className="w-0.5 bg-gray-400 h-8 mx-4" />
                 <button
-                  className="flex rounded-md bg-black px-4 py-2 text-white font-semibold hover:bg-gray-800"
-                  onClick={() => router.push("/calculate")}
+                  className="flex rounded-md bg-black  p-2 text-white font-semibold hover:bg-gray-800"
+                  onClick={() => router.push("/trip")}
                 >
-                  <CalculatorIcon className="text-white w-4 h-4 mt-1 mr-2" />
-                  Calculator
+                  <TruckIcon className="text-white w-5 h-5" />
                 </button>
               </div>
               <button

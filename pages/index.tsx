@@ -3,7 +3,7 @@ import Head from "next/head";
 import Image from "next/image";
 import { useState } from "react";
 import FloatingNav from "../components/shared/FloatingNav";
-import BasePage from "../components/templates/BasePage";
+import BasePage from "../components/shared/BasePage";
 
 const HomePage: NextPage = () => {
   const [people, setPeople] = useState<string>("");
