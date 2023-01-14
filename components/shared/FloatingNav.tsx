@@ -6,14 +6,19 @@ import {
   HomeIcon,
   TruckIcon,
   FlagIcon,
+  ArrowRightIcon,
 } from "@heroicons/react/24/outline";
+import { useUser } from "@supabase/auth-helpers-react";
 import { useRouter } from "next/router";
 import { useState } from "react";
+import { supabaseClient } from "../../services/server/supabaseClient";
 import Notification from "./Notification";
 
 export default function Example() {
   const router = useRouter();
   const [show, setShow] = useState(false);
+
+  const user = useUser();
 
   return (
     <>
@@ -35,17 +40,35 @@ export default function Example() {
                   onClick={() => router.push("/trip")}
                 >
                   <TruckIcon className="text-white w-4 h-4 mt-1 mr-2" />
-                  Trip Calculator
+                  Trip
                 </button>
               </div>
-              <button
-                className="flex rounded-md bg-red-500 px-4 py-2 text-white font-medium ml-4 hover:bg-gray-800"
-                onClick={() => {
-                  navigator.clipboard.writeText(router.pathname);
-                }}
-              >
-                Share
-              </button>
+              {!user && (
+                <div className="text-white flex flex-row italic text-sm">
+                  Make an account to save of your calculations{" "}
+                  <ArrowRightIcon className="h-3 w-3 mt-1 ml-1" />
+                </div>
+              )}
+
+              {user ? (
+                <button
+                  className="flex rounded-md bg-red-500 px-4 py-2 text-white font-medium ml-4 hover:bg-red-700"
+                  onClick={() => {
+                    supabaseClient.auth.signOut();
+                  }}
+                >
+                  Sign Out
+                </button>
+              ) : (
+                <button
+                  className="flex rounded-md bg-red-500 px-4 py-2 text-white font-medium ml-4 hover:bg-red-700"
+                  onClick={() => {
+                    router.push("/login");
+                  }}
+                >
+                  Sign In
+                </button>
+              )}
             </div>
             <div className="flex sm:hidden items-center px-2">
               <div className="flex w-0 flex-1 items-center">
@@ -63,15 +86,25 @@ export default function Example() {
                   <TruckIcon className="text-white w-5 h-5" />
                 </button>
               </div>
-              <button
-                className="flex rounded-md bg-red-500 px-4 py-2 text-white font-medium ml-4 hover:bg-red-800"
-                onClick={() => {
-                  setShow(true);
-                  navigator.clipboard.writeText(window.location.href);
-                }}
-              >
-                Share
-              </button>
+              {user ? (
+                <button
+                  className="flex rounded-md bg-red-500 px-4 py-2 text-white font-medium ml-4 hover:bg-red-700"
+                  onClick={() => {
+                    supabaseClient.auth.signOut();
+                  }}
+                >
+                  Sign Out
+                </button>
+              ) : (
+                <button
+                  className="flex rounded-md bg-red-500 px-4 py-2 text-white font-medium ml-4 hover:bg-red-700"
+                  onClick={() => {
+                    router.push("/login");
+                  }}
+                >
+                  Sign In
+                </button>
+              )}
             </div>
           </div>
         </div>

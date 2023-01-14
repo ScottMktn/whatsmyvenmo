@@ -6,13 +6,16 @@
     "start": "next start"
   },
   "dependencies": {
-    "@headlessui/react": "^1.7.4",
+    "@headlessui/react": "^1.7.7",
     "@heroicons/react": "^2.0.13",
-    "aws-sdk": "^2.1267.0",
+    "@supabase/auth-helpers-nextjs": "^0.5.2",
+    "@supabase/auth-helpers-react": "^0.3.1",
+    "@supabase/supabase-js": "^2.4.0",
     "axios": "^1.2.0",
     "next": "latest",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "uuidv4": "^6.2.13"
   },
   "devDependencies": {
     "@types/node": "18.11.3",
