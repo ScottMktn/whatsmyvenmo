@@ -1,20 +1,23 @@
 import {
+  ArrowPathIcon,
+  ArrowTopRightOnSquareIcon,
   CurrencyDollarIcon,
   IdentificationIcon,
   MinusIcon,
   PencilSquareIcon,
   PlusIcon,
+  UserCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useUser } from "@supabase/auth-helpers-react";
+import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { uuid } from "uuidv4";
-import { supabaseClient } from "../../../services/server/supabaseClient";
 import BasePage from "../../shared/BasePage";
 import FloatingNav from "../../shared/FloatingNav";
 
 interface CalculateProps {
   tripId?: string;
+  tripName?: string;
   initialEntries?: Entry[];
 }
 
@@ -52,13 +55,17 @@ const randomEntry: Entry = {
 };
 
 const TripCalculator = (props: CalculateProps) => {
-  const { tripId, initialEntries } = props;
+  const { tripId, tripName, initialEntries } = props;
   const [entries, setEntries] = useState<Entry[]>(
     initialEntries || [randomEntry]
   );
+  const [name, setName] = useState<string>(tripName || "");
   const [output, setOutput] = useState<Output>();
   const [showBreakdown, setShowBreakdown] = useState<boolean>(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string>();
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const supabaseClient = useSupabaseClient();
 
   const user = useUser();
   const router = useRouter();
@@ -174,16 +181,18 @@ const TripCalculator = (props: CalculateProps) => {
   };
 
   const onSaveTrip = async () => {
-    if (initialEntries) {
-      setFeedbackMessage(
-        "Failed to save your trip. We are adding edit support soon!"
-      );
-      // if we are editing a trip, we don't need to save it again
-      return;
-    }
+    setLoading(true);
     const { data, error } = await supabaseClient
       .from("trips")
-      .insert([{ id: uuid(), entries, user_id: user?.id || null }])
+      .insert([
+        {
+          id: uuid(),
+          entries,
+          user_id: user?.id || null,
+          trip_name: name,
+          updated_at: new Date(),
+        },
+      ])
       .select();
 
     if (data) {
@@ -192,7 +201,32 @@ const TripCalculator = (props: CalculateProps) => {
     if (error) {
       setFeedbackMessage("Failed to save your trip. Please try again");
     }
+    setLoading(false);
   };
+
+  const onUpdateTrip = async () => {
+    setLoading(true);
+    const { error } = await supabaseClient
+      .from("trips")
+      .update({
+        entries,
+        trip_name: name,
+        updated_at: new Date(),
+      })
+      .eq("id", tripId);
+
+    if (error) {
+      setFeedbackMessage("Failed to update your trip. Please try again");
+    }
+    setFeedbackMessage("Successfully updated your trip.");
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (tripId) {
+      onCalculate();
+    }
+  }, []);
 
   return (
     <BasePage
@@ -203,12 +237,78 @@ const TripCalculator = (props: CalculateProps) => {
         <p className="mt-2 sm:mt-8 text-2xl text-left font-semibold">
           Trip Calculator
         </p>
-        {
+        {tripId && (
           <p className="mt-2 text-md text-left font-light max-w-xl">
-            Trip Id: {tripId}
+            Trip Id:{" "}
+            <span>
+              <button
+                className="flex-row inline-flex"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(`${tripId}`);
+
+                  alert("Copied to clipboard!");
+                }}
+              >
+                <p className="underline truncate max-w-[200px]">{tripId}</p>
+                <ArrowTopRightOnSquareIcon
+                  className="h-4 w-4 mt-1"
+                  aria-hidden="true"
+                />
+              </button>
+            </span>
           </p>
-        }
-        <p className="mt-2 text-md text-left font-light max-w-xl">
+        )}
+        <div className="flex flex-row gap-4 mt-8">
+          <div className="flex flex-row max-w-md relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+              <IdentificationIcon
+                className="h-5 w-5 text-gray-400"
+                aria-hidden="true"
+              />
+            </div>
+            <input
+              type="text"
+              className="border border-gray-300 w-full rounded-md py-1 h-10 pl-8"
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Trip Name"
+              value={name}
+            />
+          </div>
+          {tripId ? (
+            <button
+              className="flex rounded-md bg-blue-500 px-4 py-2 md:text-md md:px-4 md:py-2 text-white font-medium hover:bg-blue-700"
+              onClick={onUpdateTrip}
+            >
+              {loading ? (
+                <>
+                  <ArrowPathIcon className="h-5 w-5 mt-0.5 mr-2 animate-spin" />
+                  Updating
+                </>
+              ) : (
+                "Update Trip"
+              )}
+            </button>
+          ) : (
+            <button
+              className="flex rounded-md bg-blue-500 px-4 py-2 md:text-md md:px-4 md:py-2 text-white font-medium hover:bg-blue-700"
+              onClick={onSaveTrip}
+            >
+              {loading ? (
+                <>
+                  <ArrowPathIcon className="h-5 w-5 mt-0.5 mr-2 animate-spin" />
+                  Saving
+                </>
+              ) : (
+                "Save Trip"
+              )}
+            </button>
+          )}
+        </div>
+        {feedbackMessage && (
+          <p className="mt-4 text-blue-500">{feedbackMessage}</p>
+        )}
+
+        <p className="mt-4 text-md text-left font-light max-w-xl">
           Note: Make sure the name is exactly the same for people with multiple
           entries.
         </p>
@@ -247,7 +347,7 @@ const TripCalculator = (props: CalculateProps) => {
                   >
                     <div className="col-span-6 md:col-span-3 relative">
                       <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
-                        <IdentificationIcon
+                        <UserCircleIcon
                           className="h-5 w-5 text-gray-400"
                           aria-hidden="true"
                         />
@@ -322,16 +422,8 @@ const TripCalculator = (props: CalculateProps) => {
           >
             Calculate
           </button>
-          <button
-            className="flex rounded-md bg-blue-500 px-4 py-2 md:text-md md:px-4 md:py-2 text-white font-medium hover:bg-blue-700"
-            onClick={onSaveTrip}
-          >
-            Save Trip
-          </button>
         </div>
-        {feedbackMessage && (
-          <p className="text-center mt-4 text-red-500">{feedbackMessage}</p>
-        )}
+
         {!!output && (
           <div className="border border-gray-500 rounded-md p-2 mt-4 flex flex-col">
             <ul className="">

@@ -35,7 +35,7 @@ const HomePage: NextPage = () => {
           </span>
         </p>
         <p className="mt-8 text-2xl md:text-3xl text-left font-light sm:text-center">
-          Need some help with math? Let us do it.
+          Need some help with math? We got it for you.
         </p>
         <ul
           role="list"

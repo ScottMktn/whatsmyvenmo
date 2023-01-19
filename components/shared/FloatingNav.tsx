@@ -7,15 +7,19 @@ import {
   TruckIcon,
   FlagIcon,
   ArrowRightIcon,
+  UserCircleIcon,
+  UserIcon,
+  ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
-import { useUser } from "@supabase/auth-helpers-react";
+import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
 import { useRouter } from "next/router";
 import { useState } from "react";
-import { supabaseClient } from "../../services/server/supabaseClient";
 import Notification from "./Notification";
 
 export default function Example() {
   const router = useRouter();
+  const supabaseClient = useSupabaseClient();
+
   const [show, setShow] = useState(false);
 
   const user = useUser();
@@ -35,13 +39,21 @@ export default function Example() {
                   Home
                 </button>
                 <div className="w-0.5 bg-gray-400 h-8 mx-4" />
-                <button
-                  className="flex rounded-md bg-black px-4 py-2 text-white font-semibold hover:bg-gray-800"
-                  onClick={() => router.push("/trip")}
-                >
-                  <TruckIcon className="text-white w-4 h-4 mt-1 mr-2" />
-                  Trip
-                </button>
+                {user && (
+                  <>
+                    <button
+                      className="flex rounded-md bg-black px-4 py-2 text-white font-semibold hover:bg-gray-800"
+                      onClick={() => router.push(`/profile`)}
+                    >
+                      <UserIcon className="text-white w-4 h-4 mt-1 mr-2" />
+                      Profile
+                    </button>
+                    <div className="text-white flex flex-row italic text-sm ml-2">
+                      <ArrowLeftIcon className="h-3 w-3 mt-1 mr-1" />
+                      View your trip keys here
+                    </div>
+                  </>
+                )}
               </div>
               {!user && (
                 <div className="text-white flex flex-row italic text-sm">
@@ -49,7 +61,6 @@ export default function Example() {
                   <ArrowRightIcon className="h-3 w-3 mt-1 ml-1" />
                 </div>
               )}
-
               {user ? (
                 <button
                   className="flex rounded-md bg-red-500 px-4 py-2 text-white font-medium ml-4 hover:bg-red-700"
@@ -79,12 +90,16 @@ export default function Example() {
                   <HomeIcon className="text-white w-5 h-5" />
                 </button>
                 <div className="w-0.5 bg-gray-400 h-8 mx-4" />
-                <button
-                  className="flex rounded-md bg-black  p-2 text-white font-semibold hover:bg-gray-800"
-                  onClick={() => router.push("/trip")}
-                >
-                  <TruckIcon className="text-white w-5 h-5" />
-                </button>
+                {user && (
+                  <>
+                    <button
+                      className="flex rounded-md bg-black p-2 text-white font-semibold hover:bg-gray-800"
+                      onClick={() => router.push("/profile")}
+                    >
+                      <UserIcon className="text-white w-5 h-5" />
+                    </button>
+                  </>
+                )}
               </div>
               {user ? (
                 <button

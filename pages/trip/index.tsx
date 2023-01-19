@@ -1,4 +1,5 @@
 import {
+  ArrowPathIcon,
   BarsArrowUpIcon,
   KeyIcon,
   PaperAirplaneIcon,
@@ -18,24 +19,23 @@ const TripPage = (props: TripPageProps) => {
   const [showSelectTrip, setShowSelectTrip] = useState(false);
   const [tripKey, setTripKey] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const supabaseClient = useSupabaseClient();
 
-  supabaseClient
-    .from("trips")
-    .select("*")
-    .then((res) => {
-      console.log(res);
-    });
+  const submitTripKey = async () => {
+    setLoading(true);
+    const { data, error } = await supabaseClient
+      .from("trips")
+      .select("*")
+      .eq("id", tripKey);
 
-  const submitTripKey = () => {
-    // TODO: Validate trip key
-
-    // if valid, redirect to trip page
-    // router.push(`/trip/${tripKey}`);
-
-    // if invalid, show error
-    setErrorMessage("Invalid trip key");
+    if (data) {
+      router.push(`/trip/${tripKey}`);
+    } else {
+      setErrorMessage("Invalid trip key");
+    }
+    setLoading(false);
   };
 
   return (
@@ -101,8 +101,17 @@ const TripPage = (props: TripPageProps) => {
                 className="ml-4 flex rounded-md bg-red-500 px-4 py-2 text-white font-semibold hover:bg-red-700"
                 onClick={() => submitTripKey()}
               >
-                <PaperAirplaneIcon className="text-white w-4 h-4 mt-1 mr-2" />
-                Go
+                {loading ? (
+                  <>
+                    <ArrowPathIcon className="h-5 w-5 mt-0.5 mr-2 animate-spin" />
+                    Loading
+                  </>
+                ) : (
+                  <>
+                    <PaperAirplaneIcon className="text-white w-4 h-4 mt-1 mr-2" />
+                    Go
+                  </>
+                )}
               </button>
             </div>
             <p className="block text-sm font-medium text-red-500 mt-1">
