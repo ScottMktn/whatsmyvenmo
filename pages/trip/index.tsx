@@ -40,7 +40,7 @@ const TripPage = (props: TripPageProps) => {
 
   return (
     <BasePage
-      metaData={{ title: "Whats My Venmo | Calculate" }}
+      metaData={{ title: "Calculate | Whats My Venmo" }}
       className="min-h-screen sm:px-20 max-w-5xl mx-auto"
     >
       <div className="p-4">
