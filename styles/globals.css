@@ -1,3 +1,25 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+  font-family: "MilkyVintage";
+  src: url("/fonts/MilkyVintage-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "MileStone";
+  src: url("/fonts/MileStone.otf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+.hero-font {
+  font-family: "MileStone", sans-serif;
+}
+
+.secondary-font {
+  font-family: "MilkyVintage", sans-serif;
+}

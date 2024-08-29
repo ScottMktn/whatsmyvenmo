@@ -1,27 +1,25 @@
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
 import { GetServerSideProps, GetServerSidePropsContext } from "next";
-import TripCalculator, {
-  Entry,
-} from "../../../components/templates/trips/TripCalculator";
-import { supabaseClient } from "../../../services/server/supabaseClient";
+import TripCalculator from "../../../components/templates/trips/TripCalculator";
+import BasePage from "../../../components/shared/BasePage";
+import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
 
 interface TripIdPageProps {
   tripId: string;
   tripName: string;
-  initialEntries: Entry[] | null;
+  expenses: any[];
 }
 
 const TripIdPage = (props: TripIdPageProps) => {
-  const { tripId, tripName, initialEntries } = props;
+  const { tripId, tripName, expenses } = props;
 
   return (
-    <>
+    <BasePage>
       <TripCalculator
         tripId={tripId}
         tripName={tripName}
-        initialEntries={initialEntries || undefined}
+        initialValues={expenses}
       />
-    </>
+    </BasePage>
   );
 };
 
@@ -29,23 +27,40 @@ export default TripIdPage;
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
   const { id } = context.query;
-  const { data, error } = await supabaseClient
+  const supabase = createServerSupabaseClient(context);
+  const tripId = id as string;
+
+  // get the trip name from the data
+  const { data: tripData, error: tripError } = await supabase
     .from("trips")
     .select("*")
-    .eq("id", id);
+    .eq("id", id)
+    .single(); // assuming there's only one trip with this ID
 
-  let tripName = null;
-  let entries = null;
-  if (data) {
-    tripName = data[0].trip_name;
-    entries = data[0].entries;
+  if (tripError) {
+    return {
+      notFound: true, // Handle case where trip is not found
+    };
   }
 
+  // Fetch expenses related to the trip
+  const { data: expensesData, error: expensesError } = await supabase
+    .from("expenses")
+    .select("*")
+    .eq("trip_id", id);
+
+  if (expensesError) {
+    return {
+      notFound: true, // Handle case where expenses data could not be fetched
+    };
+  }
+
+  // Pass the data to the page via props
   return {
     props: {
-      tripId: id,
-      tripName,
-      initialEntries: entries,
+      tripId,
+      tripName: tripData.name || "",
+      expenses: expensesData,
     },
   };
 }

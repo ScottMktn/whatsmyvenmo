@@ -1,505 +1,289 @@
-import {
-  ArrowPathIcon,
-  ArrowTopRightOnSquareIcon,
-  CurrencyDollarIcon,
-  IdentificationIcon,
-  MinusIcon,
-  PencilSquareIcon,
-  PlusIcon,
-  UserCircleIcon,
-} from "@heroicons/react/24/outline";
-import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import { uuid } from "uuidv4";
-import BasePage from "../../shared/BasePage";
-import FloatingNav from "../../shared/FloatingNav";
+import React, { useState } from "react";
+import Button from "../../shared/Button";
+import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import { ArrowPathIcon } from "@heroicons/react/20/solid";
 
-interface CalculateProps {
-  tripId?: string;
-  tripName?: string;
-  initialEntries?: Entry[];
+interface TripCalculatorProps {
+  tripId: string;
+  tripName: string;
+  initialValues: any[];
 }
 
-interface PaymentMap {
-  name: string;
-  amountOwe: number;
-  amountPaid: number;
-}
-
-interface Output {
-  total: number;
-  average: number;
-  paymentMap: PaymentMap[];
-  decision: Decision[];
-}
-
-interface Decision {
-  payer: string;
-  recipient: string;
-  amount: number;
-}
-
-export interface Entry {
-  id: string;
-  name: string;
-  description: string;
-  amount: number;
-}
-
-const randomEntry: Entry = {
-  id: uuid(),
+const DEFAULT_VAUE = {
+  id: crypto.randomUUID(),
   name: "",
+  amount: "",
   description: "",
-  amount: 0,
 };
 
-const TripCalculator = (props: CalculateProps) => {
-  const { tripId, tripName, initialEntries } = props;
-  const [entries, setEntries] = useState<Entry[]>(
-    initialEntries || [randomEntry]
+const TripCalculator = (props: TripCalculatorProps) => {
+  const { tripId, tripName, initialValues } = props;
+  // State to store the list of expense rows
+  const [expenses, setExpenses] = useState(
+    initialValues.length > 0 ? initialValues : [DEFAULT_VAUE]
   );
-  const [name, setName] = useState<string>(tripName || "");
-  const [output, setOutput] = useState<Output>();
-  const [showBreakdown, setShowBreakdown] = useState<boolean>(false);
-  const [feedbackMessage, setFeedbackMessage] = useState<string>();
-  const [loading, setLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [name, setName] = useState(tripName === "" ? "New Trip" : tripName);
+  const supabase = useSupabaseClient();
 
-  const supabaseClient = useSupabaseClient();
-
-  const user = useUser();
-  const router = useRouter();
-
-  const nameHandler = (id: string, value: string) => {
-    const copy = [...entries];
-    copy.forEach((entry) => {
-      if (entry.id === id) {
-        entry.name = value;
+  // Function to handle input changes
+  const handleChange = (
+    id: string,
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const newExpenses = expenses.map((expense) => {
+      if (expense.id === id) {
+        return { ...expense, [event.target.name]: event.target.value };
       }
+      return expense;
     });
-    setEntries(copy);
+    setExpenses(newExpenses);
   };
 
-  const descriptionHandler = (id: string, value: string) => {
-    const copy = [...entries];
-    copy.forEach((entry) => {
-      if (entry.id === id) {
-        entry.description = value;
-      }
-    });
-    setEntries(copy);
+  // Function to add a new expense row
+  const addExpense = () => {
+    setExpenses([
+      ...expenses,
+      { id: crypto.randomUUID(), name: "", amount: "", description: "" },
+    ]);
   };
 
-  const amountHandler = (id: string, value: number) => {
-    const copy = [...entries];
-    copy.forEach((entry) => {
-      if (entry.id === id) {
-        entry.amount = value;
-      }
-    });
-    setEntries(copy);
+  // Function to delete an expense row by its ID
+  const deleteExpense = (id: string) => {
+    setExpenses(expenses.filter((expense) => expense.id !== id));
   };
 
-  const onCalculate = () => {
-    const total = entries.reduce((result, entry) => {
-      return result + entry.amount;
-    }, 0);
+  const saveChanges = async () => {
+    setIsLoading(true);
 
-    // flatten duplicate names
-    const flattenedEntries: Entry[] = [];
-    entries.forEach((entry) => {
-      const found = flattenedEntries.find((e) => e.name === entry.name);
-      if (found) {
-        const copy = { ...found, amount: found.amount + entry.amount };
-        flattenedEntries.splice(flattenedEntries.indexOf(found), 1, copy);
-      } else {
-        flattenedEntries.push(entry);
-      }
-    });
-
-    const average = Math.round((total / flattenedEntries.length) * 100) / 100;
-
-    const paymentMap: PaymentMap[] = [];
-    flattenedEntries.forEach((entry) => {
-      const diff = entry.amount - average;
-      paymentMap.push({
-        name: entry.name,
-        amountOwe: diff,
-        amountPaid: entry.amount,
-      });
-    });
-    paymentMap.sort((a, b) => a.amountOwe - b.amountOwe);
-
-    const decision: {
-      payer: string;
-      recipient: string;
-      amount: number;
-    }[] = [];
-
-    const paymentMapCopy = JSON.parse(JSON.stringify(paymentMap));
-
-    let start = 0;
-    let end = paymentMapCopy.length - 1;
-    while (start < end) {
-      const p1 = paymentMapCopy[start];
-      const p2 = paymentMapCopy[end];
-      if (-p1.amountOwe > p2.amountOwe) {
-        // the person who owes owes more than the person receiving
-        p1.amountOwe = p1.amountOwe + p2.amountOwe;
-        decision.push({
-          amount: p2.amountOwe,
-          payer: p1.name,
-          recipient: p2.name,
-        });
-        end--;
-      } else if (-p1.amountOwe < p2.amountOwe) {
-        // the person who owes owes LESS than the person receiving
-        p2.amountOwe = p1.amountOwe + p2.amountOwe;
-        decision.push({
-          amount: -p1.amountOwe,
-          payer: p1.name,
-          recipient: p2.name,
-        });
-        start++;
-      } else {
-        start++;
-        end--;
-        decision.push({
-          amount: p2.amountOwe,
-          payer: p1.name,
-          recipient: p2.name,
-        });
-      }
-    }
-
-    setOutput({
-      total,
-      average,
-      decision,
-      paymentMap,
-    });
-  };
-
-  const onSaveTrip = async () => {
-    setLoading(true);
-    const { data, error } = await supabaseClient
+    // Update the name of the trip
+    const { data: tripData, error: tripError } = await supabase
       .from("trips")
-      .insert([
-        {
-          id: uuid(),
-          entries,
-          user_id: user?.id || null,
-          trip_name: name,
-          updated_at: new Date(),
-        },
-      ])
-      .select();
-
-    if (data) {
-      router.push(`/trip/${data[0].id}`);
-    }
-    if (error) {
-      setFeedbackMessage("Failed to save your trip. Please try again");
-    }
-    setLoading(false);
-  };
-
-  const onUpdateTrip = async () => {
-    setLoading(true);
-    const { error } = await supabaseClient
-      .from("trips")
-      .update({
-        entries,
-        trip_name: name,
-        updated_at: new Date(),
-      })
+      .update({ name })
       .eq("id", tripId);
 
-    if (error) {
-      setFeedbackMessage("Failed to update your trip. Please try again");
+    if (tripError) {
+      alert(tripError.message);
+      setIsLoading(false);
+      return;
     }
-    setFeedbackMessage("Successfully updated your trip.");
-    setLoading(false);
+
+    // Get the existing expenses from the database
+    const { data: existingExpenses, error: existingExpensesError } =
+      await supabase.from("expenses").select("id").eq("trip_id", tripId);
+
+    if (existingExpensesError) {
+      alert(existingExpensesError.message);
+      setIsLoading(false);
+      return;
+    }
+
+    // Extract the IDs of the current expenses in the state
+    const currentExpenseIds = expenses.map((expense) => expense.id);
+
+    // Find expenses that need to be deleted (those in the database but not in the state)
+    const expensesToDelete = existingExpenses.filter(
+      (expense) => !currentExpenseIds.includes(expense.id)
+    );
+
+    // Delete the removed expenses from the database
+    if (expensesToDelete.length > 0) {
+      const { error: deleteError } = await supabase
+        .from("expenses")
+        .delete()
+        .in(
+          "id",
+          expensesToDelete.map((expense) => expense.id)
+        );
+
+      if (deleteError) {
+        alert(deleteError.message);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // Prepare the remaining expenses for upsert (insert or update)
+    const newExpenseData = expenses.map((expense) => ({
+      id: expense.id,
+      trip_id: tripId,
+      name: expense.name,
+      amount: expense.amount,
+      description: expense.description,
+    }));
+
+    // Upsert the remaining expenses (insert new ones, update existing ones)
+    const { data: upsertData, error: upsertError } = await supabase
+      .from("expenses")
+      .upsert(newExpenseData, { onConflict: "id" });
+
+    if (upsertError) {
+      alert(upsertError.message);
+      setIsLoading(false);
+      return;
+    }
+
+    alert("Changes saved successfully!");
+    setIsLoading(false);
   };
 
-  useEffect(() => {
-    if (tripId) {
-      onCalculate();
+  // Function to calculate the breakdown of who owes whom
+  const calculateOwedAmounts = () => {
+    const totals = expenses.reduce(
+      (acc: { [key: string]: number }, expense) => {
+        acc[expense.name] = (acc[expense.name] || 0) + Number(expense.amount);
+        return acc;
+      },
+      {}
+    );
+
+    const totalExpenses = Object.values(totals).reduce(
+      (acc, amount) => acc + amount,
+      0
+    );
+
+    const numPeople = Object.keys(totals).length;
+    const fairShare = totalExpenses / numPeople;
+
+    const balances = Object.entries(totals).map(([name, amount]) => ({
+      name,
+      balance: amount - fairShare,
+    }));
+
+    // Sort balances to determine who owes whom
+    const creditors = balances
+      .filter((person) => person.balance > 0)
+      .sort((a, b) => b.balance - a.balance);
+    const debtors = balances
+      .filter((person) => person.balance < 0)
+      .sort((a, b) => a.balance - b.balance);
+
+    const transactions = [];
+
+    while (creditors.length > 0 && debtors.length > 0) {
+      const creditor = creditors[0];
+      const debtor = debtors[0];
+
+      const payment = Math.min(creditor.balance, -debtor.balance);
+      transactions.push({
+        from: debtor.name,
+        to: creditor.name,
+        amount: payment,
+      });
+
+      creditor.balance -= payment;
+      debtor.balance += payment;
+
+      if (creditor.balance === 0) creditors.shift();
+      if (debtor.balance === 0) debtors.shift();
     }
-  }, []);
+
+    return transactions;
+  };
+
+  const transactions = calculateOwedAmounts();
 
   return (
-    <BasePage
-      metaData={{ title: "Trip Calculator | Whats My Venmo" }}
-      className="min-h-screen sm:px-20 max-w-5xl mx-auto"
-    >
-      <div className="p-4">
-        <p className="mt-2 sm:mt-8 text-2xl text-left font-semibold">
-          Trip Calculator
-        </p>
-        {tripId && (
-          <p className="mt-2 text-md text-left font-light max-w-xl">
-            Trip Id:{" "}
-            <span>
-              <button
-                className="flex-row inline-flex"
-                onClick={async () => {
-                  await navigator.clipboard.writeText(`${tripId}`);
-
-                  alert("Copied to clipboard!");
-                }}
-              >
-                <p className="underline truncate max-w-[200px]">{tripId}</p>
-                <ArrowTopRightOnSquareIcon
-                  className="h-4 w-4 mt-1"
-                  aria-hidden="true"
-                />
-              </button>
-            </span>
-          </p>
-        )}
-        <div className="flex flex-row gap-4 mt-8">
-          <div className="flex flex-row max-w-md relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
-              <IdentificationIcon
-                className="h-5 w-5 text-gray-400"
-                aria-hidden="true"
-              />
+    <div className="flex flex-col space-y-4 py-8 px-4">
+      <div className="flex flex-col space-y-4">
+        <label htmlFor="trip-name" className="text-sm font-semibold">
+          Trip Name
+        </label>
+        <div className="flex items-center space-x-2">
+          <input
+            type="text"
+            name="trip-name"
+            placeholder="Enter Trip Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="p-2 rounded-md max-w-xs text-black"
+          />
+          <Button variant="primary" onClick={saveChanges}>
+            <div className="flex items-center space-x-2">
+              {isLoading && <ArrowPathIcon className="animate-spin h-5 w-5" />}
+              <span>Save Changes</span>
             </div>
+          </Button>
+        </div>
+      </div>
+      <h2 className="text-sm font-semibold pt-16">Bills/Expenses</h2>
+      <ul className="expenses-list text-black flex flex-col space-y-2">
+        {expenses.map((expense, index) => (
+          <li
+            key={expense.id}
+            className="expense-row flex items-center space-x-2"
+          >
+            <p className="text-xs w-4 text-white">{index + 1}</p>
             <input
               type="text"
-              className="border border-gray-300 w-full rounded-md py-1 h-10 pl-8"
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Trip Name"
-              value={name}
+              name="name"
+              placeholder="Enter Name"
+              value={expense.name}
+              onChange={(e) => handleChange(expense.id, e)}
+              className="w-1/4 p-2 rounded-md"
             />
-          </div>
-          {tripId ? (
-            <button
-              className="flex rounded-md bg-blue-500 px-4 py-2 md:text-md md:px-4 md:py-2 text-white font-medium hover:bg-blue-700"
-              onClick={onUpdateTrip}
+            <input
+              type="number"
+              name="amount"
+              placeholder="$"
+              value={expense.amount}
+              onChange={(e) => handleChange(expense.id, e)}
+              className="w-1/4 p-2 rounded-md"
+            />
+            <input
+              type="text"
+              name="description"
+              placeholder="Enter description"
+              value={expense.description}
+              onChange={(e) => handleChange(expense.id, e)}
+              className="w-1/2 p-2 rounded-md"
+            />
+            <Button
+              onClick={() => deleteExpense(expense.id)}
+              variant="secondary"
             >
-              {loading ? (
-                <>
-                  <ArrowPathIcon className="h-5 w-5 mt-0.5 mr-2 animate-spin" />
-                  Updating
-                </>
-              ) : (
-                "Update Trip"
-              )}
-            </button>
-          ) : (
-            <button
-              className="flex rounded-md bg-blue-500 px-4 py-2 md:text-md md:px-4 md:py-2 text-white font-medium hover:bg-blue-700"
-              onClick={onSaveTrip}
-            >
-              {loading ? (
-                <>
-                  <ArrowPathIcon className="h-5 w-5 mt-0.5 mr-2 animate-spin" />
-                  Saving
-                </>
-              ) : (
-                "Save Trip"
-              )}
-            </button>
-          )}
-        </div>
-        {feedbackMessage && (
-          <p className="mt-4 text-blue-500">{feedbackMessage}</p>
-        )}
-
-        <p className="mt-4 text-md text-left font-light max-w-xl">
-          Note: Make sure the name is exactly the same for people with multiple
-          entries.
-        </p>
-
-        <div className="border border-gray-500 rounded-lg p-2 mt-4">
-          <div className="p-2 pb-4">
-            <div className="text-sm md:text-md text-left font-semibold flex flex-row justify-between w-full">
-              <div className="flex flex-row">
-                <p className="mt-0.5 md:mt-1 text-xl">Entries</p>
-                <button
-                  className="ml-2 md:ml-4 flex rounded-md bg-green-500 px-4 py-2 md:text-md md:px-4 md:py-2 text-white font-medium hover:bg-green-700"
-                  onClick={() => {
-                    setEntries((entries) =>
-                      entries.concat([
-                        {
-                          id: uuid(),
-                          name: "",
-                          description: "",
-                          amount: 0,
-                        },
-                      ])
-                    );
-                  }}
-                >
-                  <PlusIcon className="text-white w-4 h-4 mt-0.5 mr-1" />
-                  Add
-                </button>
-              </div>
-            </div>
-            {entries.length > 0 && (
-              <div className="space-y-6 md:space-y-4 mt-2 divide-y-2 divide-black md:divide-none">
-                {entries.map((entry, idx) => (
-                  <div
-                    className="pt-6 md:pt-2 grid grid-cols-12 gap-4"
-                    key={idx}
-                  >
-                    <div className="col-span-6 md:col-span-3 relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
-                        <UserCircleIcon
-                          className="h-5 w-5 text-gray-400"
-                          aria-hidden="true"
-                        />
-                      </div>
-                      <input
-                        type="text"
-                        className="border border-gray-300 w-full rounded-md py-1 h-10 pl-8"
-                        onChange={(e) => nameHandler(entry.id, e.target.value)}
-                        placeholder="Enter Name"
-                        value={entry.name}
-                      />
-                    </div>
-                    <div className="col-span-6 md:col-span-2 relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
-                        <CurrencyDollarIcon
-                          className="h-5 w-5 text-gray-400"
-                          aria-hidden="true"
-                        />
-                      </div>
-                      <input
-                        type="number"
-                        min={0}
-                        className="border border-gray-300 w-full rounded-md py-1 h-10 pl-8"
-                        onChange={(e) =>
-                          amountHandler(entry.id, +e.target.value)
-                        }
-                        value={entry.amount.toString()}
-                      />
-                    </div>
-                    <div className="col-span-10 md:col-span-6 relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
-                        <PencilSquareIcon
-                          className="h-5 w-5 text-gray-400"
-                          aria-hidden="true"
-                        />
-                      </div>
-                      <input
-                        type="text"
-                        className="border border-gray-300 w-full rounded-md py-1 h-10 pl-8"
-                        onChange={(e) =>
-                          descriptionHandler(entry.id, e.target.value)
-                        }
-                        placeholder="Enter description"
-                        value={entry.description}
-                      />
-                    </div>
-                    <div className="col-span-2 md:col-span-1">
-                      <button
-                        onClick={() => {
-                          setEntries((entries) => {
-                            return entries.filter(
-                              (current) => current.id !== entry.id
-                            );
-                          });
-                        }}
-                        type="button"
-                        className="items-center border rounded-lg border-transparent bg-red-500 p-2 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                      >
-                        <MinusIcon className="h-5 w-5" aria-hidden="true" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-row gap-4 w-full justify-center mt-4">
-          <button
-            className="flex rounded-md bg-red-500 px-4 py-2 text-white font-medium hover:bg-red-700"
-            onClick={onCalculate}
-          >
-            Calculate
-          </button>
-        </div>
-
-        {!!output && (
-          <div className="border border-gray-500 rounded-md p-2 mt-4 flex flex-col">
-            <ul className="">
-              {output &&
-                output.decision.map((d, idx) => (
-                  <li key={idx}>
-                    <p className="text-gray-600">
-                      <span className="text-black font-bold">{d.payer} </span>
-                      needs to send
-                      <span className="text-black font-bold">
-                        {" "}
-                        {d.recipient}
-                      </span>
-                      {": "}
-                      <span className="text-green-600 font-bold">
-                        ${d.amount.toFixed(2)}
-                      </span>
-                    </p>
-                  </li>
-                ))}
-            </ul>
-            <button
-              className="rounded-md bg-white px-2 py-1 mt-8 text-black text-sm font-medium mx-auto block border border-black"
-              onClick={() => setShowBreakdown(!showBreakdown)}
-            >
-              {showBreakdown ? "Hide Breakdown" : "Show Breakdown"}
-            </button>
-            {showBreakdown && (
-              <div className="p-2 mt-2 flex flex-col border-t border-gray-300">
-                <ul>
-                  <li key="total">
-                    <p>
-                      Total:{" "}
-                      <span className="font-semibold">${output.total}</span>
-                    </p>
-                  </li>
-                  <li className="mb-4" key="average">
-                    <p>
-                      Average:{" "}
-                      <span className="font-semibold">${output.average}</span>
-                    </p>
-                  </li>
-                  {output.paymentMap.map((item, idx) => (
-                    <li key={idx}>
-                      {item.amountOwe >= 0 ? (
-                        <p>
-                          {item.name} is owed{" "}
-                          <span className="text-green-400">
-                            ${Math.round(item.amountOwe * 100) / 100}{" "}
-                          </span>
-                          <span className="text-black">
-                            (Paid ${item.amountPaid} - avg ${output.average})
-                          </span>
-                        </p>
-                      ) : (
-                        <p>
-                          {item.name} owes{" "}
-                          <span className="text-red-400">
-                            {" "}
-                            ${Math.round(-item.amountOwe * 100) / 100}{" "}
-                          </span>
-                          <span className="text-black">
-                            (Paid ${item.amountPaid} - avg ${output.average})
-                          </span>
-                        </p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
+              x
+            </Button>
+          </li>
+        ))}
+      </ul>
+      <div>
+        <Button onClick={addExpense} variant="secondary">
+          + Add
+        </Button>
       </div>
-      <FloatingNav />
-    </BasePage>
+      <div className="pt-16 flex flex-col space-y-4">
+        <h3 className="text-sm font-semibold">Calculations</h3>
+        <ul className="flex flex-col space-y-1">
+          <li className="text-lg">
+            Total Expenses:{" $"}
+            {expenses.reduce((acc, expense) => acc + Number(expense.amount), 0)}
+          </li>
+          <li className="text-lg">
+            Unique People:{" "}
+            {
+              expenses.reduce((acc: string[], expense) => {
+                if (acc.includes(expense.name)) {
+                  return acc;
+                }
+                return [...acc, expense.name];
+              }, []).length
+            }
+          </li>
+          <li className="text-lg flex flex-col space-y-2">
+            <p>Breakdown:</p>
+            <ul className="flex flex-col pl-8">
+              {transactions.map((transaction, index) => (
+                <li key={index} className="text-lg">
+                  {transaction.from} owes {transaction.to}: $
+                  {transaction.amount.toFixed(2)}
+                </li>
+              ))}
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
   );
 };
 

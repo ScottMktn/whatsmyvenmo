@@ -6,13 +6,14 @@ import {
   TruckIcon,
 } from "@heroicons/react/24/outline";
 import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
-import { useUser } from "@supabase/auth-helpers-react";
+import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
 import { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import BasePage from "../components/shared/BasePage";
 import FloatingNav from "../components/shared/FloatingNav";
 import { supabaseClient } from "../services/server/supabaseClient";
+import Button from "../components/shared/Button";
 
 interface ProfileProps {
   userTrips: any[];
@@ -23,95 +24,54 @@ const Profile = (props: ProfileProps) => {
   const router = useRouter();
 
   return (
-    <BasePage
-      metaData={{ title: "Profile | Whats My Venmo" }}
-      className="min-h-screen sm:px-20 max-w-5xl mx-auto"
-    >
-      <div className="p-4">
-        <p className="mt-2 sm:mt-8 text-2xl text-left font-semibold">
-          Your Trip Keys
-        </p>
-        {userTrips.length === 0 ? (
-          <button
-            onClick={() => router.push("/trip/calculate")}
-            type="button"
-            className="mt-4 relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+    <BasePage metaData={{ title: "Profile | Whats My Venmo" }}>
+      <div className="px-4 py-16">
+        <div className="flex w-full justify-between">
+          <p className="text-xl text-left font-semibold">Your Trips</p>
+          <Button
+            variant="primary"
+            onClick={async () => {
+              const { data, error } = await supabaseClient
+                .from("trips")
+                .insert({})
+                .select("*");
+
+              if (error) {
+                alert(error);
+                return;
+              }
+
+              router.push(`/trip/${data[0].id}`);
+            }}
           >
-            <TruckIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <span className="mt-2 block text-sm font-medium text-gray-900">
+            Create New Trip
+          </Button>
+        </div>
+
+        {userTrips.length === 0 ? (
+          <div className="mt-4 relative block w-full rounded-lg border-2 border-dashed border-sky-300 p-12 text-center">
+            <TruckIcon className="mx-auto h-12 w-12 text-sky-200" />
+            <span className="mt-2 block text-sm font-semibold text-sky-200">
               You do not have any trips. Create one now!
             </span>
-          </button>
+          </div>
         ) : (
-          <ul
-            role="list"
-            className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-          >
+          <ul role="list" className="mt-4 grid grid-cols-2 gap-4">
             {userTrips.map((trip) => (
-              <li
+              <button
                 key={trip.id}
-                className="col-span-1 divide-y divide-gray-200 rounded-lg bg-white border border-gray-300"
+                className="whitespace-pre-wrap col-span-1 border border-sky-300 p-4 rounded-lg flex flex-col hover:bg-sky-500 hover:cursor-pointer"
+                onClick={() => router.push(`/trip/${trip.id}`)}
               >
-                <div className="flex w-full items-center justify-between space-x-6 p-6">
-                  <div className="flex-1 truncate">
-                    <div className="flex items-center space-x-3">
-                      <h3 className="truncate text-md font-medium text-gray-900">
-                        {trip.trip_name}
-                      </h3>
-                      <span className="inline-block flex-shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-                        {trip.type}
-                      </span>
-                    </div>
-                    <p className="mt-2 truncate text-xs text-gray-500">
-                      Created on{" "}
-                      {new Date(trip.created_at).toLocaleDateString()}
-                    </p>
-                    <p className="mt-1 truncate text-xs text-gray-500">
-                      Last updated{" "}
-                      {new Date(trip.updated_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <div className="-mt-px flex divide-x divide-gray-200">
-                    <div className="flex w-0 flex-1">
-                      <button
-                        onClick={async () => {
-                          await navigator.clipboard.writeText(
-                            `https://whatsmyvenmo.com/trip/${trip.id}`
-                          );
-
-                          alert("Copied to clipboard!");
-                        }}
-                        className="relative -mr-px inline-flex w-0 flex-1 items-center justify-center rounded-bl-lg border border-transparent py-4 text-sm font-medium text-gray-700 hover:text-gray-500"
-                      >
-                        <ArrowTopRightOnSquareIcon
-                          className="h-5 w-5 text-gray-400"
-                          aria-hidden="true"
-                        />
-                        <span className="ml-3">Share</span>
-                      </button>
-                    </div>
-                    <div className="-ml-px flex w-0 flex-1">
-                      <Link
-                        href={`/trip/${trip.id}`}
-                        className="relative inline-flex w-0 flex-1 items-center justify-center rounded-br-lg border border-transparent py-4 text-sm font-medium text-gray-700 hover:text-gray-500"
-                      >
-                        <PaperAirplaneIcon
-                          className="h-5 w-5 text-gray-400"
-                          aria-hidden="true"
-                        />
-                        <span className="ml-3">View </span>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </li>
+                <h3 className="text-lg font-semibold">{trip.name}</h3>
+                <p className="text-sm text-sky-200 pt-4">
+                  Created {new Date(trip.created_at).toLocaleDateString()}
+                </p>
+              </button>
             ))}
           </ul>
         )}
       </div>
-      <FloatingNav />
     </BasePage>
   );
 };
@@ -136,13 +96,15 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     .select("*")
     .eq("user_id", session.user.id);
 
-  let trips = [...(data || [])];
-  trips.forEach((trip) => {
-    trip.type = "trip";
-  });
+  if (error) {
+    return {
+      notFound: true, // Handle case where trip is not found
+    };
+  }
+
   return {
     props: {
-      userTrips: trips,
+      userTrips: data,
     },
   };
 }

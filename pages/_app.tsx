@@ -3,6 +3,12 @@ import type { AppProps } from "next/app";
 import { useState } from "react";
 import { createBrowserSupabaseClient } from "@supabase/auth-helpers-nextjs";
 import { SessionContextProvider } from "@supabase/auth-helpers-react";
+import { Inter } from "@next/font/google";
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "700"], // Include the font weights you want to use
+});
 
 function MyApp({ Component, pageProps }: AppProps) {
   const [supabase] = useState(() => createBrowserSupabaseClient());
@@ -11,7 +17,9 @@ function MyApp({ Component, pageProps }: AppProps) {
       supabaseClient={supabase}
       initialSession={pageProps.initialSession}
     >
-      <Component {...pageProps} />
+      <div className={inter.className}>
+        <Component {...pageProps} />
+      </div>
     </SessionContextProvider>
   );
 }
