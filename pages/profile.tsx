@@ -22,6 +22,7 @@ interface ProfileProps {
 const Profile = (props: ProfileProps) => {
   const { userTrips } = props;
   const router = useRouter();
+  const user = useUser();
 
   return (
     <BasePage metaData={{ title: "Profile | Whats My Venmo" }}>
@@ -31,9 +32,15 @@ const Profile = (props: ProfileProps) => {
           <Button
             variant="primary"
             onClick={async () => {
+              if (!user) {
+                alert("You must be logged in to create a trip.");
+                return;
+              }
               const { data, error } = await supabaseClient
                 .from("trips")
-                .insert({})
+                .insert({
+                  user_id: user.id,
+                })
                 .select("*");
 
               if (error) {
@@ -84,9 +91,11 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   } = await supabase.auth.getSession();
 
   if (!session) {
+    // redirect to home page if user is not logged in
     return {
-      props: {
-        userTrips: [],
+      redirect: {
+        destination: "/",
+        permanent: false,
       },
     };
   }
